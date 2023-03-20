@@ -1,0 +1,54 @@
+name: main - CI/CD
+
+on:
+  push:
+    branches: 'main'
+
+jobs:
+  post-deploy:
+    runs-on: ubuntu-latest
+    outputs:
+      statusCode: ${{ steps.step1.outputs.statusCode }}
+    steps:
+      - name: Check server health
+        id: step1
+        run: |
+          echo "code=\`curl -s -o /dev/null -w %{http_code} ${{ secrets.HEALTH_CHECK_URL }}\`
+                if [ \$code != 200 ]; then
+                  echo \$code
+                  exit 1
+                else
+                  echo \$code
+                  exit 0
+                fi" > HEALTH_CHECK.sh
+          sudo chmod +x ./HEALTH_CHECK.sh
+          statusCode=`./HEALTH_CHECK.sh`
+          echo "statusCode=$statusCode" >> $GITHUB_OUTPUT
+        continue-on-error: true
+      - name: Send slack message when site down
+        if: steps.step1.outputs.statusCode == '200'
+        uses: slackapi/slack-github-action@v1.23.0
+        with:
+          payload: |
+            {
+              "blocks": [
+                  {
+                      "type": "header",
+                      "text": {
+                          "type": "plain_text",
+                          "text": "Error Code ${{ steps.step1.outputs.statusCode }} ",
+                          "emoji": false
+                      }
+                  },
+                  {
+                      "type": "section",
+                      "text": {
+                          "type": "mrkdwn",
+                          "text": "GitHub Action build result: ${{ job.status }}\n\n Last commit or PR: ${{ github.event.pull_request.html_url || github.event.head_commit.url }}\n\nAuthor ${{ github.event.head_commit.author.name }} :parrot-party:"
+                      }
+                  }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
