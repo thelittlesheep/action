@@ -55,5 +55,5 @@ jobs:
         if: steps.step1.outputs.statusCode != '200'
         run: |
           echo "Site is down"
-          sleep 10
+          sleep 10s
           exit 1
