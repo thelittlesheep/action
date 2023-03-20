@@ -16,7 +16,7 @@ jobs:
           echo "code=\`curl -s -o /dev/null -w %{http_code} ${{ secrets.HEALTH_CHECK_URL }}\`
                 if [ \$code != 200 ]; then
                   echo \$code
-                  exit 1
+                  exit 0
                 else
                   echo \$code
                   exit 0
@@ -24,7 +24,6 @@ jobs:
           sudo chmod +x ./HEALTH_CHECK.sh
           statusCode=`./HEALTH_CHECK.sh`
           echo "statusCode=$statusCode" >> $GITHUB_OUTPUT
-        continue-on-error: true
       - name: Send slack message when site down
         if: steps.step1.outputs.statusCode != '200'
         uses: slackapi/slack-github-action@v1.23.0
@@ -52,3 +51,8 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+      - name: Fail build when site down
+        if: steps.step1.outputs.statusCode != '200'
+        run: |
+          echo "Site is down"
+          exit 1
