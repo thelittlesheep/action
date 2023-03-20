@@ -26,7 +26,7 @@ jobs:
           echo "statusCode=$statusCode" >> $GITHUB_OUTPUT
         continue-on-error: true
       - name: Send slack message when site down
-        if: steps.step1.outputs.statusCode == '200'
+        if: steps.step1.outputs.statusCode != '200'
         uses: slackapi/slack-github-action@v1.23.0
         with:
           payload: |
